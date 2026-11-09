@@ -1081,7 +1081,7 @@ const VER=3, ROOM_PREFIX='ark-sectors-v3-', CODE_ABC='ABCDEFGHJKMNPQRSTUVWXYZ234
 const PEER_URLS=['https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js','https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js'];
 const MOCK=/[?&]net=mock/.test(location.search);
 const NET={mode:'solo',peer:null,conns:new Map(),host:null,code:'',pid:0,name:'',roster:[],sendT:0,trT:0,fullT:0,started:false,timer:0};
-const NOSERVER='Не удаётся связаться с сервером комнат. Проверь интернет. Если игра открыта внутри Claude, открой её на сайте nikolai1005.github.io/SECTORS';
+const NOSERVER='Не удаётся связаться с сервером комнат. Проверь интернет. Если игра открыта внутри Claude, открой её на сайте nikolai1005.github.io/SECTORS.';
 
 /* stand-in for PeerJS inside one browser (tests, ?net=mock) */
 class MockConn{constructor(p,peer,cid){this.p=p;this.peer=peer;this.cid=cid;this.h={};this.open=false;}
