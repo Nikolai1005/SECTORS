@@ -253,7 +253,7 @@ body.touch #ride{top:calc(92px + env(safe-area-inset-top,0px))}
       <p class="sub">Бесконечный спуск по секторам комплекса АРК</p>
       <p class="flr" style="margin:.35rem 0 0;font-size:.78rem;letter-spacing:.12em;text-transform:uppercase">Глубже всего: этаж <b id="deepN">00</b></p>
     </div>
-    <p class="lead">Административный с манекенами, Офисные коридоры, где Ветошь убирает твои следы, и Архив, где Плёнка слышит каждый шаг. После каждого лифта выпадает случайный сектор. Играй один или собери до четырёх друзей в комнате.</p>
+    <p class="lead">Административный с манекенами, Офисные коридоры, где Ветошь убирает твои следы, Архив, где Плёнка слышит каждый шаг, и Зал Основания, где в нише спит каменный страж Эль Гранд Leo. После каждого лифта выпадает случайный сектор. Играй один или собери до четырёх друзей в комнате.</p>
     <ul class="ctrl ctrl-key">
       <li><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><span>идти, <kbd>Shift</kbd> бег, <kbd>C</kbd> тихий шаг</span></li>
       <li><span><kbd>Пробел</kbd></span><span>прыжок, отпустить трос</span></li>
@@ -679,6 +679,7 @@ function raycast(o,d,maxT,mask,skip){const inv=[1/d[0],1/d[1],1/d[2]];let best=n
   if(mask&RBo&&G.boss&&G.boss.alive){const B=G.boss;tryB(B.body.min,B.body.max,'boss',B);const cp=corePos();tryB([cp[0]-0.3,cp[1]-0.3,cp[2]-0.3],[cp[0]+0.3,cp[1]+0.3,cp[2]+0.3],'core',B);}
   if(mask&RV&&G.vet)tryB(G.vet.body.min,G.vet.body.max,'vet',G.vet);
   if(mask&RP&&G.ple){const B=G.ple.body;tryB(B.min,[B.max[0],B.max[1]+0.25,B.max[2]],'ple',G.ple);}
+  if(mask&RP&&G.leo&&!G.leo.dead){const B=G.leo.body;tryB(B.min,B.max,'leo',G.leo);}
   if(best)best.p=[o[0]+d[0]*best.t,o[1]+d[1]*best.t,o[2]+d[2]*best.t];return best;}
 function los(a,b){const d=[b[0]-a[0],b[1]-a[1],b[2]-a[2]],L=Math.hypot(...d);if(L<1e-3)return true;d[0]/=L;d[1]/=L;d[2]/=L;return !raycast(a,d,L-0.35,ROCC|RD);}
 function losStatic(a,b){const d=[b[0]-a[0],b[1]-a[1],b[2]-a[2]],L=Math.hypot(...d);if(L<1e-3)return true;d[0]/=L;d[1]/=L;d[2]/=L;return !raycast(a,d,L-0.2,ROCC);}
@@ -694,7 +695,7 @@ function navPath(nav,a,b){if(a===b)return [a];const prev=new Array(nav.nodes.len
 // move an actor m (has body, want, yaw) toward target point using nav graph
 function wideLos(c,x,z,w){const dx=x-c[0],dz=z-c[2],l=Math.hypot(dx,dz);if(l<0.05)return true;const px=-dz/l*w,pz=dx/l*w;
   return losStatic([c[0],1.0,c[2]],[x,1.0,z])&&losStatic([c[0]+px,0.6,c[2]+pz],[x+px,0.6,z+pz])&&losStatic([c[0]-px,0.6,c[2]-pz],[x-px,0.6,z-pz]);}
-function navMove(m,nav,t,spd,dt){const c=m.body.c,w=m.body.h[0]*0.92;let goal=t;
+function navMove(m,nav,t,spd,dt){const c=m.body.c,w=m.navW||m.body.h[0]*0.92;let goal=t;
   const direct=distXZ(c,t)<1.2||wideLos(c,t[0],t[2],w);
   if(!direct){m.navT-=dt;if(m.navT<=0||!m.path||!m.navGoal||distXZ(m.navGoal,t)>1.5){m.navT=0.8;m.navGoal=t.slice();const a=navNearest(nav,c),b=navNearest(nav,t);m.path=navPath(nav,a,b);m.pi=0;}
     if(m.path&&m.path.length){while(m.pi<m.path.length-1){const n=nav.nodes[m.path[m.pi]],nx=nav.nodes[m.path[m.pi+1]];
@@ -761,6 +762,14 @@ function sfx2(k,vol=1){if(!AU.ctx||AU.muted||vol<0.02)return;try{switch(k){
   case 'notice':tone('sine',82,34,1.1,0.55*vol);nz(0.7,'lowpass',240,1,0.35*vol);for(const f of [523,554,587,831])tone('sawtooth',f,f*1.025,1.3,0.032*vol);tone('square',1568,1470,0.45,0.02*vol);nz(0.5,'bandpass',2600,2,0.1*vol);break;
   case 'creep':tone('sawtooth',150,92,0.55,0.05*vol);nz(0.35,'bandpass',600,4,0.15*vol);tone('triangle',1046,1040,0.8,0.07*vol,0.05);tone('triangle',1108,1100,0.8,0.06*vol,0.05);tone('sine',70,40,0.5,0.35*vol,0.05);break;
   case 'alert':tone('sine',880,860,0.35,0.06*vol);tone('sine',932,920,0.35,0.05*vol);nz(0.2,'bandpass',1800,3,0.08*vol);break;
+  // Эль Гранд Leo and the glyph floor
+  case 'glyph':tone('sine',660,640,0.35,0.035*vol);tone('sine',990,980,0.25,0.015*vol,0.02);break;
+  case 'leoStep':nz(0.45,'lowpass',140,1.2,0.9*vol);tone('sine',48,30,0.5,0.4*vol);nz(0.25,'bandpass',500,1,0.12*vol,0.03);break;
+  case 'grind':nz(1.2,'bandpass',260,3,0.35*vol);nz(0.9,'bandpass',900,2,0.08*vol,0.2);tone('sawtooth',55,48,1.1,0.05*vol);break;
+  case 'leoRoar':tone('sawtooth',90,55,1.4,0.12*vol);tone('sawtooth',93,57,1.4,0.1*vol);nz(1.3,'bandpass',380,1.5,0.35*vol);tone('sine',40,28,1.3,0.4*vol);break;
+  case 'stomp':nz(0.7,'lowpass',180,1,1.0*vol);tone('sine',55,22,0.8,0.6*vol);nz(0.35,'bandpass',1400,1,0.2*vol,0.02);for(let i=0;i<4;i++)nz(0.05,'bandpass',2500,4,0.12*vol,0.1+i*0.07);break;
+  case 'sunHit':tone('sine',523,523,1.2,0.08*vol);tone('sine',784,784,1.2,0.06*vol,0.08);tone('sine',1046,1046,1.3,0.05*vol,0.16);nz(0.4,'lowpass',300,1,0.5*vol);tone('sawtooth',80,40,0.9,0.1*vol);break;
+  case 'crumble':for(let i=0;i<9;i++)nz(0.3+Math.random()*0.3,'lowpass',200+Math.random()*400,1,0.5*vol,i*0.12);tone('sine',45,20,1.6,0.5*vol);break;
   case 'bang':nz(0.5,'lowpass',240,0.9,0.9*vol);tone('sawtooth',58,36,0.5,0.12*vol);nz(0.25,'bandpass',900,1.5,0.3*vol,0.02);break;}}catch(e){}}
 function darkLoop(){const c=AU.ctx;if(!c)return null;const g=c.createGain(),o1=c.createOscillator(),o2=c.createOscillator();o1.frequency.value=49;o2.frequency.value=52.5;o1.connect(g);o2.connect(g);
   g.gain.value=0;g.gain.setTargetAtTime(AU.muted?0:0.09,c.currentTime,0.4);g.connect(AU.master);o1.start();o2.start();sfx2('beat',0.8);const iv=setInterval(()=>sfx2('beat',0.8),860);
@@ -840,7 +849,41 @@ function fpRightMesh(col){return new MB().box([0,-0.04,0.05],[0.034,0.04,0.05],0
   .box([0.012,-0.072,0.19],[0.035,0.035,0.13],0x66727a,10,0,[0.3,0,0]).box([0.006,-0.056,0.1],[0.039,0.039,0.012],col,0,-0.6,[0.3,0,0]).build();}
 function fpLeftMesh(col){return new MB().box([0,0,0],[0.048,0.056,0.014],0x4a4038,5).box([0,0.078,0.004],[0.042,0.03,0.011],0x4a4038,5).box([0.056,0.005,0.006],[0.012,0.03,0.011],0x4a4038,5,0,[0,0,-0.4])
   .box([0,-0.06,0.17],[0.036,0.036,0.15],0x66727a,10,0,[0.45,0,0]).box([0,-0.04,0.07],[0.047,0.047,0.012],col,0,-0.6,[0.45,0,0]).build();}
-function buildRigs(){RIG.man=manRig(false);RIG.eye=manRig(true);RIG.boss=bossRig();RIG.vet=vetRig();RIG.ple=pleRig();RIG.pl=PCOL.map(playerRig);
+// Эль Гранд Leo: five-metre basalt guardian, jaguar mask, jade inlays, ARK indicators bolted in as eyes
+function leoRig(){seed=77;const B=0x464b43,B2=0x535850,MOSS=0x4d6a37,J=0x3aa77c,BOLT=0x6a6f72,T=0xbfb8a0,R={};
+  const moss=(b,n,box)=>{for(let k=0;k<n;k++){const [cx,cy,cz,hx,hy,hz]=box;b.box([cx+(srand()-0.5)*hx*1.6,cy+(srand()-0.5)*hy*1.6,cz+hz],[0.08+srand()*0.14,0.06+srand()*0.16,0.012],MOSS,10);}};
+  for(const s of [-1,1])R[s<0?'lL':'lR']=part([s*0.5,2.3,0],b=>{b.box([0,-1.05,0],[0.36,1.05,0.4],B,14);b.box([0,-0.95,0.405],[0.3,0.07,0.01],J,0,-0.9);b.box([0,-2.15,0.15],[0.44,0.15,0.6],B2,14);
+    b.box([0,-2.2,0.74],[0.4,0.1,0.05],B2,14);moss(b,3,[0,-1.2,0,0.3,0.8,0.4]);});
+  R.t=part([0,0,0],b=>{b.box([0,2.45,0],[0.9,0.3,0.55],B,14);b.box([0,2.15,0.56],[0.4,0.35,0.04],B2,14);b.box([0,3.0,0],[0.95,0.4,0.6],B,14);b.box([0,3.75,0],[1.15,0.5,0.66],B2,14);
+    for(const y of [3.95,3.55,3.15]){b.box([0,y,0.672],[0.13,0.13,0.012],0x111111,5);b.box([0,y+0.165,0.675],[0.2,0.035,0.012],J,0,-0.7);b.box([0,y-0.165,0.675],[0.2,0.035,0.012],J,0,-0.7);
+      b.box([0.165,y,0.675],[0.035,0.13,0.012],J,0,-0.7);b.box([-0.165,y,0.675],[0.035,0.13,0.012],J,0,-0.7);}
+    for(const sx of [-1,1])for(let k=0;k<3;k++)b.box([sx*(0.42+k*0.17),3.6+k*0.12,0.668],[0.06,0.018,0.01],J,0,-0.5,[0,0,sx*0.5]);
+    b.box([0,2.72,0.605],[0.92,0.05,0.01],J,0,-0.6);for(const sx of [-1,1]){b.box([sx*0.9,4.05,0.67],[0.07,0.07,0.03],BOLT,5);b.box([sx*0.9,3.2,0.62],[0.07,0.07,0.03],BOLT,5);}
+    b.box([0,3.9,-0.72],[0.3,0.25,0.06],0x2b3134,5);b.box([0.12,3.98,-0.785],[0.03,0.03,0.01],0xff3020,0,-1.5);b.box([0,3.4,-0.67],[0.05,0.55,0.02],0x202020,5);
+    moss(b,6,[0,3.5,0,0.9,0.6,0.66]);b.box([0.55,4.27,0.15],[0.4,0.03,0.35],MOSS,10);b.box([-0.6,4.27,-0.1],[0.3,0.03,0.3],MOSS,10);});
+  for(const s of [-1,1])R[s<0?'aL':'aR']=part([s*1.3,4.1,0],b=>{b.box([0,0,0],[0.38,0.3,0.42],B2,14);b.box([0,-0.75,0],[0.3,0.65,0.32],B,14);b.box([0,-1.35,0],[0.34,0.07,0.36],J,0,-0.9);
+    b.box([0,-1.85,0.04],[0.33,0.45,0.35],B,14);b.box([0,-2.5,0.08],[0.38,0.24,0.4],B2,14);b.box([s*0.25,0.18,0.2],[0.05,0.05,0.04],BOLT,5);moss(b,2,[0,-0.8,0,0.25,0.5,0.32]);});
+  R.h=part([0,4.3,0],b=>{b.box([0,0.08,0],[0.4,0.14,0.4],B,14);b.box([0,0.68,0.02],[0.6,0.52,0.52],B2,14);b.box([0,0.48,0.62],[0.36,0.22,0.16],B,14);b.box([0,0.62,0.78],[0.12,0.06,0.03],0x2a2c28,14);
+    b.box([0,0.3,0.7],[0.3,0.035,0.06],T,14);for(const sx of [-1,1]){b.box([sx*0.2,0.24,0.74],[0.04,0.08,0.03],T,14);b.box([sx*0.42,1.25,0],[0.14,0.12,0.09],B,14);
+      b.box([sx*0.26,0.78,0.565],[0.12,0.07,0.04],BOLT,5);b.box([sx*0.26,0.78,0.61],[0.08,0.045,0.01],0xff2a1a,0,-2.2);b.box([sx*0.42,0.78,0.56],[0.03,0.03,0.02],BOLT,5);b.box([sx*0.5,1.3,0.2],[0.08,0.08,0.08],J,0,-0.8);}
+    b.box([0,0.9,0.56],[0.6,0.07,0.06],B,14);b.box([0,1.32,-0.15],[0.8,0.15,0.35],B2,14);b.box([0,1.42,0.2],[0.08,0.08,0.08],J,0,-0.8);
+    for(let k=0;k<7;k++)b.box([(srand()-0.5)*0.9,0.95+srand()*0.25,0.535],[0.035,0.035,0.01],0x22241f,14);moss(b,3,[0,1.1,0,0.5,0.15,0.4]);});
+  return R;}
+function sunMesh(sc=1){const b=new MB();b.box([0,0,0],[0.2*sc,0.2*sc,0.2*sc],0xe0a030,0,0.8);for(let k=0;k<8;k++){const a=k*Math.PI/4;b.box([Math.cos(a)*0.27*sc,Math.sin(a)*0.27*sc,0],[0.06*sc,0.045*sc,0.07*sc],0xb07a20,0,0.45,[0,0,a]);}
+  b.box([-0.07*sc,0.05*sc,0.205*sc],[0.03*sc,0.02*sc,0.01],0x5a3608);b.box([0.07*sc,0.05*sc,0.205*sc],[0.03*sc,0.02*sc,0.01],0x5a3608);b.box([0,-0.06*sc,0.205*sc],[0.06*sc,0.015*sc,0.01],0x5a3608);return b.build();}
+function leoDebMeshes(){seed=88;const out=[];for(let i=0;i<5;i++){const b=new MB();const s=0.3+i*0.05;b.box([0,0,0],[s,s*0.8,s*0.9],i%2?0x474b43:0x3a3e38,14,0,[srand(),srand(),srand()]);
+  b.box([s*0.3,s*0.5,s*0.6],[s*0.4,0.03,s*0.3],0x4d6a37,10);if(i%2===0)b.box([0,0,s*0.9],[s*0.5,s*0.15,0.02],0x3aa77c,0,0.3);out.push(b.build());}return out;}
+function poseLeo(L,dt,t){const c=L.body.c,A=track(L,c,dt,1.25),st=L.st,bd=L.bound>0;A.amp=lerp(A.amp,clamp(A.spd/2.2,0,1.1),1-Math.exp(-5*dt));
+  const T={},sw=Math.sin(A.ph)*0.42*A.amp,sh=bd?Math.sin(t*30)*0.05:0;
+  if(st===0){T.lL=[0,0,0];T.lR=[0,0,0];T.aL=[0,-0.18,0.1];T.aR=[0,-0.18,-0.1];T.h=[0,0.28,0];}
+  else if(st===1){T.lL=[0,0,0];T.lR=[0,0,0];T.aL=[0,-0.3+Math.sin(t*7)*0.04,0.14];T.aR=[0,-0.3-Math.sin(t*7)*0.04,-0.14];T.h=[L.tgt?clamp(angTo(c,L.yaw,L.tgt),-0.8,0.8):0,-0.05,0];}
+  else if(st===4){T.lL=[0,0.08,0];T.lR=[0,-0.7,0];T.aL=[0,-2.75,0.35];T.aR=[0,-2.75,-0.35];T.h=[0,-0.22,0];}
+  else if(st===6){T.lL=[0,0.25,0];T.lR=[0,-0.2,0];T.aL=[0,-1.6+Math.sin(t*8)*0.4,0.6];T.aR=[0,-1.2-Math.sin(t*8)*0.4,-0.6];T.h=[Math.sin(t*5)*0.3,-0.45,0];}
+  else{T.lL=[0,sw,0];T.lR=[0,-sw,0];T.aL=[0,-sw*0.7-0.1+sh,0.12];T.aR=[0,sw*0.7-0.1-sh,-0.12];T.h=[Math.sin(t*0.8)*0.2*(A.amp<0.2?1:0.3),0.05,sh];}
+  const S=A.sm||(A.sm={});if(A.lastSt===4&&st!==4)A.slam=0.2;A.lastSt=st;A.slam=Math.max(0,(A.slam||0)-dt);const kk=1-Math.exp(-(A.slam>0?28:st===4?7:9)*dt);
+  for(const key in T){const cur=S[key]||(S[key]=T[key].slice());for(let i=0;i<3;i++)cur[i]+=(T[key][i]-cur[i])*kk;AP[key]=cur;}AP.t=Z3;
+  AP.bob=-Math.abs(Math.sin(A.ph))*0.12*A.amp-(st===6?0.1:0);AP.lean=st===6?-0.18:st===4?-0.06:0;return AP;}
+function buildRigs(){RIG.man=manRig(false);RIG.eye=manRig(true);RIG.boss=bossRig();RIG.vet=vetRig();RIG.ple=pleRig();RIG.pl=PCOL.map(playerRig);RIG.leo=leoRig();M.sun=sunMesh();M.sunS=sunMesh(0.55);M.leoDeb=leoDebMeshes();
   M.fpR=PCOL.map(fpRightMesh);M.fpL=PCOL.map(fpLeftMesh);}
 
 /* ---- per-entity motion tracking (works on host and clients: driven by rendered position) ---- */
@@ -1279,7 +1322,149 @@ function s3Ple(dt,ps){const P=G.ple;if(!P)return;const c=P.body.c;P.bound-=dt;P.
   const reach=P.st>=2?1.4:0.9;
   for(const p of ps){const pc=p.body.c;if(distXZ(pc,c)<reach&&Math.abs(pc[1]-c[1])<1.9&&p.hurtCD<=0){const k=[pc[0]-c[0],pc[2]-c[2]],l=Math.hypot(k[0],k[1])||1;
     hurtPlayer(p,'Плёнка записала тебя на ленту.',[k[0]/l*8,5,k[1]/l*8]);P.stun=3;P.st=0;break;}}}
-const SECT=[S1,S2,S3];
+
+/* ---------- Sector 05 · Зал Основания (Эль Гранд Leo) ---------- */
+// Ruins under the complex. The glyph floor carries every step to the stone guardian in the niche.
+// Standing still, walking on stones/columns or flying on the rope does not touch the glyphs.
+let NAV5=null;
+const SUN5=[[-11,2.27,-21],[11,2.27,-33],[-6,2.27,-46]];
+function onGlyph5(c){return c[1]<1.1&&c[2]<-7.45&&c[2]>-63.7&&Math.abs(c[0])<16;}
+function leoChest(L){const c=L.body.c,y=L.yaw;return [c[0]+Math.sin(y)*0.95,c[1]-2.5+3.55,c[2]+Math.cos(y)*0.95];}
+function leoHead(L){const c=L.body.c,y=L.yaw;return [c[0]+Math.sin(y)*0.62,c[1]-2.5+5.08,c[2]+Math.cos(y)*0.62];}
+function clear5(x,z,r){for(const s of G.statics){if(s.off||s.max[1]<0.3||s.min[1]>4.6)continue;if(x+r>s.min[0]&&x-r<s.max[0]&&z+r>s.min[2]&&z-r<s.max[2])return false;}return true;}
+function buildNav5(){const X=[],Z=[];for(let x=-13.75;x<=13.8;x+=2.5)X.push(x);for(let z=-9;z>=-57.6;z-=2.5)Z.push(z);const nodes=[],idx={},links=[];
+  Z.forEach((z,j)=>X.forEach((x,i)=>{if(clear5(x,z,1.0)){idx[i+','+j]=nodes.length;nodes.push([x,z]);}}));
+  const seg=(a,b)=>{const n=Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/0.5);for(let k=1;k<n;k++){const t=k/n;if(!clear5(a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,0.9))return false;}return true;};
+  for(let j=0;j<Z.length;j++)for(let i=0;i<X.length;i++){const a=idx[i+','+j];if(a==null)continue;for(const [di,dj] of [[1,0],[0,1],[1,1],[-1,1]]){const b=idx[(i+di)+','+(j+dj)];if(b!=null&&seg(nodes[a],nodes[b]))links.push([a,b]);}}
+  const h1=nodes.length;nodes.push([0,-57.5]);const h2=nodes.length;nodes.push([0,-61.6]);links.push([h1,h2]);
+  for(let k=0;k<h1;k++)if(nodes[k][1]<-51&&Math.abs(nodes[k][0])<5)if(seg(nodes[k],nodes[h1]))links.push([k,h1]);
+  NAV5=makeNav(nodes,links);}
+const S5={code:'05',name:'Зал Основания',feels:true,
+  intro:'Плиты с глифами чувствуют каждый шаг. Стой, иди по камням или лети на тросе, и страж в нише не проснётся.',
+  sky:[0.045,0.06,0.05],gnd:[0.02,0.026,0.02],fogC:[0.01,0.018,0.014],blackout:null,
+  cps:[{p:[0,0,0.4],yaw:0}],
+  F(){return {suns:0,dead:false,exit:false,aw:0};},
+  zone(p){return p[2]>-3?'entry':p[2]<-63.8?'lift':'hall';},fog(){return 0.03;},
+  inLift(p){return p[2]<-65;},exitOpen(){return G.F.exit;},exitLit(){return G.F.exit;},
+  cab:{y:0,door:-64.1,back:-70.1},cams:[[2.4,4.0,2.2],[-6,11.75,-16],[6,11.75,-37],[0,11.75,-51]],
+  build({S,D,L,mb}){seed=505;const H=16,WALL=0x4a5048,ST=0x575a51,ST2=0x62655a,BEAM=0x2f3437,JADE=0x2f6b55,MOSS=0x4d6a37;
+    S(0,-0.5,-34,33,1,74,0x4b4e46,14);S(0,H+0.25,-31.5,33,0.5,58,0x2a2e2c,14);
+    S(-16.25,H/2,-31.5,0.5,H,58,WALL,14);S(16.25,H/2,-31.5,0.5,H,58,WALL,14);
+    S(-9.05,H/2,-2.75,14.9,H,0.5,WALL,14);S(9.05,H/2,-2.75,14.9,H,0.5,WALL,14);S(0,(3.2+H)/2,-2.75,3.2,H-3.2,0.5,WALL,14);
+    S(-9.85,H/2,-60.25,13.3,H,0.5,WALL,14);S(9.85,H/2,-60.25,13.3,H,0.5,WALL,14);S(0,12.5,-60.25,6.4,7,0.5,WALL,14);
+    // niche where the guardian stands, exit door at its back
+    S(-3.45,4.5,-62.1,0.5,9,3.3,ST,14);S(3.45,4.5,-62.1,0.5,9,3.3,ST,14);S(0,9.25,-62.1,7.4,0.5,3.3,ST,14);
+    S(-2.4,4.5,-63.75,1.6,9,0.5,ST,14);S(2.4,4.5,-63.75,1.6,9,0.5,ST,14);S(0,6.1,-63.75,3.2,5.8,0.5,ST,14);
+    for(let k=0;k<7;k++)D(-3.1+k*1.03,8.85,-60.0,0.8,0.5,0.1,k%2?JADE:ST2,14,k%2?0.2:0);
+    // lift room behind the niche
+    S(-3.25,2.25,-67.05,0.5,4.5,6.6,WALL,4);S(3.25,2.25,-67.05,0.5,4.5,6.6,WALL,4);S(0,2.25,-70.35,7,4.5,0.5,WALL,4);S(0,4.75,-67.05,7,0.5,6.6,0x2c3133,3);
+    D(0,10.2,-60.0,3.2,0.6,0.1,0x2c3133,5);seg7(mb,'5',[0,10.2,-59.94],0.36,0x6aa36f,0,'z');
+    // entry room (ARK concrete) and the bolted steel landing
+    S(-3.25,2.25,0.2,0.5,4.5,6.4,0x4d5354,4);S(3.25,2.25,0.2,0.5,4.5,6.4,0x4d5354,4);S(0,2.25,3.15,7,4.5,0.5,0x4d5354,4);S(0,4.75,0.2,7,0.5,6.4,0x2c3133,3);
+    D(0,1.5,2.88,2.4,3,0.1,0x4b5356,5);D(0,1.5,2.82,2.2,0.18,0.06,0xd8a531,11);seg7(mb,'05',[0,3.7,2.87],0.5,0xb8873e,0,'z');
+    S(0,0.2,-5.2,8,0.4,4.4,0x3a4044,5);for(const x of [-3.9,3.9])D(x,0.75,-5.2,0.05,0.7,4.4,0xd8a531,11);
+    // glyph floor: 2 m tiles with carved jade marks
+    for(let x=-15;x<=15;x+=2)D(x+1,0.004,-34,0.04,0.008,52.5,0x2b2e29,14);for(let z=-8;z>=-60;z-=2)D(0,0.004,z,32,0.008,0.04,0x2b2e29,14);
+    for(let x=-15;x<15;x+=2)for(let z=-8;z>-60;z-=2){const n=1+Math.floor(srand()*3);for(let k=0;k<n;k++){const v=srand()<0.5;D(x+1+(srand()-0.5)*1.1,0.006,z-1+(srand()-0.5)*1.1,v?0.08:0.5,0.012,v?0.5:0.08,JADE,14,0.12);}}
+    // rope anchors: ARK beams bolted across the vault, pipes along it
+    for(const z of [-9,-16,-23,-30,-37,-44,-51,-57])S(0,12.5,z,32,0.5,0.5,BEAM,5);
+    for(const x of [-9,9])S(x,11.6,-31,0.3,0.3,56,0x3e3a30,5);
+    // broken columns and fallen blocks: the safe way across
+    const col=(x,z,h)=>{S(x,h/2,z,1.3,h,1.3,ST,14);D(x,h+0.03,z,1.36,0.06,1.36,ST2,14);D(x+0.66,h*0.45,z,0.02,h*0.5,0.7,MOSS,10);};
+    col(-5.5,-10,1.0);col(-8,-12.8,1.2);col(-9.6,-16.1,1.2);col(7,-38.5,1.2);col(3,-41,1.0);col(-1,-43.2,1.2);
+    col(-6.5,-55,1.4);col(6.5,-55,1.4);col(0,-50.5,1.0);col(12.5,-12,2.2);col(-13,-40,2.4);col(13,-50,1.8);col(4.5,-16.5,1.1);col(8.2,-19.5,1.3);
+    S(-5,0.5,-26,5,1.0,1.6,ST2,14);S(2.5,0.6,-28,5,1.2,1.6,ST,14);S(7.5,0.5,-30.5,3,1.0,1.6,ST2,14);
+    D(-5,1.02,-26,4.6,0.04,0.3,JADE,14,0.15);D(2.5,1.22,-28,4.6,0.04,0.3,JADE,14,0.15);
+    // altars with the Sun stones
+    for(const [x,,z] of SUN5){S(x,0.5,z,4,1,4,ST,14);S(x,1.5,z,2.4,1,2.4,ST2,14);D(x,2.02,z,0.9,0.04,0.9,JADE,0,0.3);
+      for(const [dx,dz] of [[0,1.205],[0,-1.205],[1.205,0],[-1.205,0]])D(x+dx,1.5,z+dz,Math.abs(dz)>0?2.0:0.02,0.5,Math.abs(dx)>0?2.0:0.02,JADE,14,0.18);}
+    // jaguar reliefs and moss on the walls
+    for(const z of [-14,-30,-46]){for(const sx of [-1,1]){const x=sx*15.95;D(x,6,z,0.12,3.2,2.6,ST2,14);D(x-sx*0.08,6.6,z,0.06,0.5,1.6,JADE,14,0.2);D(x-sx*0.08,5.4,z,0.06,0.25,1.0,0x2a2c28,14);}}
+    for(let k=0;k<40;k++){const sx=srand()<0.5?-1:1,z=-6-srand()*52,h=1+srand()*4;D(sx*15.97,H-0.5-h/2-srand()*3,z,0.05,h,0.15+srand()*0.3,MOSS,10);}
+    // lights: ARK floodlights on beams, guardian eyes, sun stones
+    [[-9,-12],[9,-12],[-9,-27],[9,-27],[-9,-42],[9,-42],[0,-55]].forEach(([x,z],i)=>{D(x,12.05,z,0.6,0.3,0.4,0x2a2e2f,5);D(x,11.88,z,0.5,0.04,0.3,0xdfe8ec,0,1.4);L([x,11.3,z],18,[0.72,0.8,0.84],0.95,'main',i===3);});
+    L([0,3.6,0],8,[0.8,0.85,0.9],1.0,'steady');L([0,3.8,-67],9,[0.5,1,0.6],1.4,'exit');
+    L([0,6.6,-61],11,[1,0.16,0.08],1.4,'sector');G.lights[G.lights.length-1].tag='eye';
+    SUN5.forEach((p,i)=>{L([p[0],p[1]+0.6,p[2]],8,[1,0.66,0.26],1.3,'sector');G.lights[G.lights.length-1].tag='sun'+i;});
+    G.d={exit:S(0,1.6,-63.75,3.2,3.2,0.3,0,0,{render:false,tag:'exit'}),exitK:0};
+    buildNav5();},
+  spawn(){const h={home:true};
+    SUN5.forEach((p,i)=>addDyn('sun',p.slice(),[0.24,0.24,0.24],5,M.sun,{id:'sun'+i,spin:[1.2,0,0]}));
+    const ar=addDyn('arch',[0,1.3,-58.5],[0.16,0.02,0.16],0.3,M.arch,{float:true,pick:true,id:'a005'});ar.alive=false;
+    for(const [x,z] of [[-2.5,-6],[2.6,-5.6],[-11.2,-21.2],[10.6,-32.5],[-6.6,-46],[-13.5,-30],[12.8,-24],[0.5,-36],[-9,-52],[9.5,-47]])addDyn('box',[x,(Math.abs(x)===11.2||x===10.6||x===-6.6)?2.3:0.28,z],[0.275,0.275,0.275],4,M.box,h);
+    for(const [x,z] of [[-12.6,-8.6],[13.2,-36.5],[-2.2,-34]])addDyn('crate',[x,0.5,z],[0.5,0.5,0.5],22,M.crate,h);
+    G.glyphQ=[];G.glyphs=[];G.waves=[];
+    G.leo=mkActor([0,2.5,-61.6],[0.85,2.5,0.85],{navW:1.15,st:0,A:0,tgt:null,home:[0,-61.6],stT:0,cd:0,searchT:0,dead:false});},
+  reset(){const L=G.leo;if(!L||L.dead)return;L.body.c=[0,2.5,-61.6];upd(L.body);L.st=0;L.A=0;L.yaw=0;L.stun=2;L.bound=0;L.path=null;L.tgt=null;},
+  host(dt){const F=G.F,ps=livePlayers();s5Steps(dt,ps);s5Leo(dt,ps);
+    if(F.dead&&!F.exit){G.exitT-=dt;if(G.exitT<=0)F.exit=true;}},
+  local(dt){const F=G.F,d=G.d;d.exit.off=F.exit;d.exitK=lerp(d.exitK,F.exit?1:0,1-Math.exp(-1.5*dt));
+    const t=G.time-G.t0;
+    if(t>1)say('intro','Под комплексом руины. Зал Основания. Видишь статую в нише? Это не статуя.');
+    if(t>6)say('glyph','Плиты с глифами чувствуют шаги. Пока стоишь, идёшь по камням или висишь на тросе, он спит.');
+    if(t>14)say('suns','На трёх алтарях Солнечные камни. Грудь стража открыта, только когда он не спит. Брось камень ему в грудь.');
+    s5Glyphs(dt);},
+  onF(P,F){if(F.suns>P.suns){if(F.suns===1)say('s1','Нефрит треснул! Ещё два камня.');else if(F.suns===2)say('s2','Второй. Он слабеет, остался последний.');}
+    if(!P.dead&&F.dead)say('s3','Он рушится… Под нишей лифт. Бегите!');
+    if(!P.exit&&F.exit)sfx('door');},
+  objective(){const F=G.F;if(F.exit)return 'Беги к лифту за нишей стража';if(F.dead)return 'Страж рассыпался, лифт открывается';
+    return 'Солнечные камни в грудь стража · '+F.suns+'/3';},
+  draw(MODEL){const d=G.d,F=G.F;compose(MODEL,0,1.6+d.exitK*3.0,-63.65,0,0,0);drawMesh(M.exit2,MODEL);compose(MODEL,0,4.47,-67.05,0,0,0);drawMesh(M.lift,MODEL,F.exit?1:0.03);},
+  light(Lt,t){const L=G.leo;if(Lt.tag==='eye'){if(!L||L.dead)return 0;Lt.p=leoHead(L);return L.st===0?0.12:L.st===1?0.8:1.5+Math.sin(t*9)*0.2;}
+    if(Lt.tag&&Lt.tag.startsWith('sun')){const o=G.dyns.find(x=>x.id===Lt.tag);if(!o||!o.alive)return 0;Lt.p=[o.c[0],o.c[1]+0.5,o.c[2]];return Lt.i*(0.85+0.15*Math.sin(t*3+o.i));}return Lt.i;},
+  fx(rp){const gJ=[],gS=[],gR=[];const now=G.time;
+    for(const g of G.glyphs){const a=now-g.t;if(a<1.6)quad(gJ,[g.p[0],0.03,g.p[2]],[0.9,0,0],[0,0,0.9],0.75*(1-a/1.6));}
+    for(const w of G.waves){const a=now-w.t;if(a<0.9){const r=1+a*7;quad(gJ,[w.p[0],0.05,w.p[2]],[r,0,0],[0,0,r],0.55*(1-a/0.9));}}
+    for(const o of G.dyns)if(o.kind==='sun'&&o.alive)billboard(gS,o.c,0.95,0.6+Math.sin(now*3+o.i)*0.12);
+    const L=G.leo;if(L&&!L.dead){const ch=leoChest(L);if(L.st!==0)billboard(gS,ch,0.9+G.F.suns*0.25,0.25+0.2*Math.sin(now*4));
+      if(L.st!==0){const h=leoHead(L),y=L.yaw,cx=Math.cos(y),sx=Math.sin(y);for(const s of [-1,1])billboard(gR,[h[0]+cx*0.26*s+sx*0.02,h[1],h[2]-sx*0.26*s+cx*0.02],0.32,0.85);}}
+    drawFx(gJ,[0.32,1,0.66],true,'add');drawFx(gS,[1,0.62,0.22],true,'add');drawFx(gR,[1,0.15,0.08],true,'add');},
+  snapA(){const L=G.leo;return {l:[r2(L.body.c[0]),r2(L.body.c[1]),r2(L.body.c[2]),r2(L.yaw),L.st,L.bound>0?1:0,L.dead?1:0]};},
+  applyA(a){const L=G.leo;if(L&&a.l){smA(L,a.l);L.st=a.l[4];L.bound=a.l[5];}},
+};
+// vibration: each step on the glyph floor (host side, every live player, proxies included)
+function s5Steps(dt,ps){for(const p of ps){const c=p.body.c,pc=p.gpc||(p.gpc=c.slice());const d=Math.hypot(c[0]-pc[0],c[2]-pc[2]);p.gpc=c.slice();
+    const on=onGlyph5(c),v=p.vel||p.body.v,hs=Math.hypot(v[0],v[2]);
+    if(on&&!p.gon&&pc[1]>1.25)G.glyphQ.push({p:[c[0],0,c[2]],s:1.8});p.gon=on;
+    if(on&&d<1.5&&hs>0.4){p.gacc=(p.gacc||0)+d;if(p.gacc>=0.8){p.gacc=0;G.glyphQ.push({p:[c[0],0,c[2]],s:hs<3.2?0.45:hs>6.4?1.6:0.9});}}}}
+// glowing glyphs under every step on this machine (visual only) + a soft chime for your own steps
+function s5Glyphs(dt){const me=G.player.body.c;const P=G.player;
+  const mark=(o,c,mine)=>{const pc=o.glp||(o.glp=c.slice());const d=Math.hypot(c[0]-pc[0],c[2]-pc[2]);o.glp=c.slice();if(!onGlyph5(c)||d>1.5||d<0.002)return;
+    o.gla=(o.gla||0)+d;if(o.gla>=0.8){o.gla=0;G.glyphs.push({p:[c[0],0,c[2]],t:G.time});if(G.glyphs.length>40)G.glyphs.shift();if(mine)sfx('glyph',0.55);else sfxAt('glyph',c.slice(),0.3,3);}};
+  if(!G.echo&&P.grounded)mark(P,me,true);for(const r of G.rem.values())if(r.inGame&&!r.echo&&r.rc)mark(r,r.rc,false);
+  G.waves=G.waves.filter(w=>G.time-w.t<1);}
+function s5Leo(dt,ps){const L=G.leo;if(!L||L.dead)return;const c=L.body.c,F=G.F;L.bound-=dt;L.stun-=dt;L.cd-=dt;
+  for(const q of G.glyphQ){const d=distXZ(q.p,c);L.A+=q.s*(d<26?1:0.6);if(L.st>=1||L.A>=2)L.tgt=q.p.slice();}
+  G.glyphQ.length=0;L.A=Math.max(0,L.A-0.7*dt);F.aw=r2(Math.min(3,L.A/1.6));
+  // Sun stones: an awake guardian's chest takes them, a sleeping one is sealed and wakes up
+  const ch=leoChest(L);
+  for(const o of G.dyns){if(o.kind!=='sun'||!o.alive||dist3(o.c,ch)>1.35||(o.bt&&G.time-o.bt<1.5))continue;
+    if(L.st===0){if(!o.bt||G.time-o.bt>1.2){o.bt=G.time;const ax=o.c[0]-L.body.c[0],az=o.c[2]-L.body.c[2],al=Math.hypot(ax,az)||1;o.v=[ax/al*5,3.5,az/al*5];o.float=false;L.A=Math.max(L.A,5);L.tgt=[o.c[0],0,o.c[2]];hostEvent({k:'leo',e:'sealed',p:ch.map(r2)});}}
+    else{o.alive=false;F.suns++;L.stun=3.2;L.st=6;hostEvent({k:'pick',kind:'sun',id:o.id,i:o.i,pid:-1});hostEvent({k:'leo',e:'sun',n:F.suns,p:ch.map(r2)});
+      if(F.suns>=3){s5Defeat();return;}}}
+  if(L.st===6){L.want=[0,0];if(L.stun<=0){L.st=2;L.A=Math.max(L.A,6);}return;}
+  if(L.stun>0){L.want=[0,0];return;}
+  const slow=L.bound>0?0.35:1;
+  switch(L.st){
+    case 0:L.want=[0,0];if(L.A>=2){L.st=1;L.stT=1.6;hostEvent({k:'leo',e:'stir',p:leoHead(L).map(r2)});}break;
+    case 1:L.want=[0,0];if(L.tgt)turnTo(L,L.tgt,dt*0.35);L.stT-=dt;if(L.A>=4.5){L.st=2;L.searchT=0;hostEvent({k:'leo',e:'wake',p:leoHead(L).map(r2)});}else if(L.stT<=0&&L.A<1.2){L.st=0;}break;
+    case 2:{let near=null,nd=3.4;for(const p of ps){const d=distXZ(p.body.c,c);if(d<nd&&p.body.c[1]<c[1]+2.5){nd=d;near=p;}}
+      if(near&&L.cd<=0){turnTo(L,near.body.c,1);L.st=4;L.stT=0.95;L.want=[0,0];hostEvent({k:'leo',e:'wind',p:leoHead(L).map(r2)});break;}
+      if(L.tgt&&distXZ(c,L.tgt)>1.8){navMove(L,NAV5,L.tgt,3.1*slow,dt);L.searchT=0;}
+      else{L.want=[0,0];L.yaw+=dt*0.9;L.searchT+=dt;if(L.searchT>3&&L.A<0.8){L.st=3;L.searchT=0;}}break;}
+    case 3:{if(L.A>=3){L.st=2;break;}const h=[L.home[0],0,L.home[1]];if(distXZ(c,h)>0.5)navMove(L,NAV5,h,2.0*slow,dt);
+      else{L.want=[0,0];let dy=-L.yaw;while(dy>Math.PI)dy-=Math.PI*2;while(dy<-Math.PI)dy+=Math.PI*2;L.yaw+=dy*Math.min(1,dt*2);if(Math.abs(dy)<0.05){L.st=0;L.A=0;}}break;}
+    case 4:L.want=[0,0];L.stT-=dt;if(L.stT<=0){s5Stomp(L,ps);L.st=2;L.cd=1.8;}break;
+    default:L.st=2;}}
+function s5Stomp(L,ps){const c=L.body.c,sp=[c[0]+Math.sin(L.yaw)*1.4,0,c[2]+Math.cos(L.yaw)*1.4];hostEvent({k:'leo',e:'stomp',p:sp.map(r2)});
+  for(const p of ps){const pc=p.body.c,d=distXZ(pc,sp),dc=distXZ(pc,c);if(((pc[1]<1.4&&d<4.2)||(dc<2.9&&pc[1]<4.3))&&p.hurtCD<=0){const k=[pc[0]-c[0],pc[2]-c[2]],l=Math.hypot(k[0],k[1])||1;hurtPlayer(p,'Страж раздавил тебя.',[k[0]/l*9,6,k[1]/l*9]);}}
+  for(const o of G.dyns)if(o.alive&&!o.pick&&!o.float&&o.kind!=='sun'&&distXZ(o.c,sp)<6&&o.c[1]<1.5)o.v[1]=Math.max(o.v[1],3.2);}
+function s5Defeat(){const L=G.leo;G.F.dead=true;G.exitT=3;const ev={k:'leo',e:'down',c:L.body.c.map(r3),yaw:r3(L.yaw)};s5Debris(ev.c,ev.yaw,true);hostEvent(ev);
+  const ar=G.dyns.find(o=>o.id==='a005');if(ar){ar.c=[L.body.c[0],1.3,L.body.c[2]];upd(ar);ar.alive=true;}}
+function s5Debris(c,yaw,vel){const L=G.leo;if(!L||L.dead)return;L.dead=true;L.st=7;const feet=c[1]-2.5;
+  [[0,5.0,0.5],[0,3.7,0.55],[0,2.6,0.5],[-1.3,3.4,0.4],[1.3,3.4,0.4],[-0.5,1.2,0.4],[0.5,1.2,0.4],[-1.3,1.8,0.32],[1.3,1.8,0.32]].forEach(([dx,dy,s],i)=>{
+    const o=addDyn('debris',[c[0]+Math.cos(yaw)*dx,feet+dy,c[2]-Math.sin(yaw)*dx],[s,s,s],30,M.leoDeb[i%M.leoDeb.length],{yaw:yaw+i,spin:[rand(-4,4),rand(-4,4),rand(-4,4)]});if(vel)o.v=[rand(-3,3),rand(1,5),rand(-3,3)];});}
+const SECT=[S1,S2,S3,S5];
 
 /* ================= co-op networking ================= */
 const VER=4, ROOM_PREFIX='ark-sectors-v3-', CODE_ABC='ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -1427,14 +1612,15 @@ const ARCH=[
  {id:'a0001',img:IMG.main,t:'Архив 0001 · Возвращение',p:'Объект вернулся из измерения в 02:17. Это уже не он. Сознание закрепили в образце 0001. Ядро в груди держит его здесь.'},
  {id:'a031',img:IMG.vet,t:'Архив 031 · Ночная смена',p:'Уборщик остался на смене в 02:17. Система подхватила его привычку и сделала из неё программу очистки. После каждого цикла Ветошь стирает следы прошлых прохождений.'},
  {id:'a052',img:IMG.ple,t:'Архив 052 · Звукозапись',p:'АРК писал голоса, шаги и гул вентиляции на магнитную ленту. Когда система начала умирать, она связала обрывки записей в одно тело, чтобы слышать сектора.'},
+ {id:'a005',img:IMG.leo,t:'Архив 005 · Страж',p:'«Статуя стояла в нише раньше, чем мы залили первый бетон. Мы прикрутили ей глаза АРК, чтобы она сторожила фундамент. Она не видит и не слышит. Она чувствует пол.»'},
  {id:'a0002',img:IMG.leo,t:'Архив 0002 · Голос Создателя',p:'«Под площадкой руины. Страж в Зале Основания не спит, он ждёт. Я отправил первого вниз в 02:17. Если вы это слышите, цикл уже повторился.»'}];
-const NEXT=[{img:IMG.ara,n:'Арахне',s:'Гнездо'},{img:IMG.drk,n:'Дрейк',s:'Затопленный'},{img:IMG.leo,n:'Эль Гранд Leo',s:'Зал Основания'}];
+const NEXT=[{img:IMG.ara,n:'Арахне',s:'Гнездо'},{img:IMG.drk,n:'Дрейк',s:'Затопленный'}];
 const SAVE='sectors-proto-v1';
 const load=()=>{try{return JSON.parse(localStorage.getItem(SAVE))||{};}catch(e){return {};}};
 const store=o=>{try{localStorage.setItem(SAVE,JSON.stringify(o));}catch(e){}};
 const fmt=x=>Math.floor(x/60)+':'+String(Math.floor(x%60)).padStart(2,'0');
 function newRun(sec){return {startSec:sec,t:0,used:0,falls:0,downs:0,floor:1};}
-const SIMG=[IMG.man,IMG.vet,IMG.ple];
+const SIMG=[IMG.man,IMG.vet,IMG.ple,IMG.leo];
 const RIDE_LINES=['Двери закрыты. Лифт идёт вниз, держитесь вместе.','Музыку включил я. Так спокойнее, правда?','Я вижу вас на камере в кабине. Все на месте.','Не смотрите на потолок. Просто слушайте музыку.'];
 function nextSec(){const o=SECT.map((_,i)=>i).filter(i=>i!==G.sec);return o[Math.floor(Math.random()*o.length)];}
 let RUN=newRun(0),MENUSEL=0,LOBBYSEL=0;
@@ -1460,8 +1646,9 @@ function rebuildActors(){G.actors=[{kind:'me',body:G.player.body,ref:G.me,off:fa
   for(const w of G.walkers)G.actors.push({kind:'walker',body:w.body,ref:w,off:false});
   if(G.boss)G.actors.push({kind:'boss',body:G.boss.body,ref:G.boss,off:false});
   if(G.vet)G.actors.push({kind:'vet',body:G.vet.body,ref:G.vet,off:false});
-  if(G.ple)G.actors.push({kind:'ple',body:G.ple.body,ref:G.ple,off:false});}
-function syncActorsOff(){for(const a of G.actors){if(a.kind==='me')a.off=G.echo;else if(a.kind==='pl')a.off=a.ref.echo||!a.ref.inGame;else if(a.kind==='boss')a.off=!G.boss.alive;}}
+  if(G.ple)G.actors.push({kind:'ple',body:G.ple.body,ref:G.ple,off:false});
+  if(G.leo)G.actors.push({kind:'leo',body:G.leo.body,ref:G.leo,off:false});}
+function syncActorsOff(){for(const a of G.actors){if(a.kind==='me')a.off=G.echo;else if(a.kind==='pl')a.off=a.ref.echo||!a.ref.inGame;else if(a.kind==='boss')a.off=!G.boss.alive;else if(a.kind==='leo')a.off=G.leo.dead;}}
 
 /* ================= level ================= */
 let staticMesh=null;
@@ -1475,7 +1662,7 @@ function buildLevel(n){seed=[7,101,211][n];const mb=new MB();
   const cb=SECT[n].cab;G.cabDoor=cb?S(0,cb.y+2.25,cb.door,6.4,4.5,0.24,0,0,{render:false,off:true,tag:'cab'}):null;
   if(staticMesh)gl.deleteBuffer(staticMesh.buf);staticMesh=mb.build();}
 function newSector(n){const old=G,rem=old?old.rem:new Map();if(old){if(old.pleL)old.pleL.stop();if(old.pleW)old.pleW.stop();rideStop(old);if(old.darkSnd)old.darkSnd.stop();}
-  G={sec:n,S:SECT[n],phase:old?old.phase:'menu',statics:[],dyns:[],actors:[],walkers:[],eyes:[],boss:null,vet:null,ple:null,lights:[],d:null,F:null,Fp:null,rem,
+  G={sec:n,S:SECT[n],phase:old?old.phase:'menu',statics:[],dyns:[],actors:[],walkers:[],eyes:[],boss:null,vet:null,ple:null,leo:null,glyphQ:[],glyphs:[],waves:[],lights:[],d:null,F:null,Fp:null,rem,
     player:{body:body([0,0.9,0],[0.32,0.9,0.32]),grounded:false,coyote:0,jumpBuf:0,kbT:0},cam:{yaw:0,pitch:0,roll:0,bob:0,fov:74,recoil:0},
     hp:3,inv:0,echo:false,echoT:0,mode:0,charges:20,reload:0,rope:{on:false,anchor:[0,0,0],len:0,reel:false},grab:{obj:null,drain:0},extracting:false,shots:[],
     bo:{t:38,ph:'idle',k:0},lightOn:true,flash:0,shake:0,walkActive:false,t0:0,time:0,frame:0,radio:{q:[],cur:null,t:0},said:new Set(),hintT:0,cardT:0,
@@ -1496,7 +1683,7 @@ function inCab(p){const c=G.S.cab;return !!c&&Math.abs(p[0])<2.9&&p[2]<c.door-0.
 function placeInCab(){const c=G.S.cab,b=G.player.body,o=SPAWN_OFF[(NET.pid||0)%4];b.c=[o[0]*1.4,c.y+0.95,(c.door+c.back)/2+o[1]*1.6-0.4];b.v=[0,0,0];upd(b);G.cam.yaw=Math.PI;G.cam.pitch=0;}
 function startRide(t0){if(G.ride||!G.S.cab)return;const F=G.F;G.ride={t:t0||0,dur:15,f:F.rideF||RUN.floor+1,bendAt:9.2,light:1};
   endPrimary();if(G.echo){G.echo=false;G.echoT=0;G.hp=3;}G.inv=99;if(!inCab(G.player.body.c))placeInCab();if(G.cabDoor)G.cabDoor.off=false;
-  if(isHost())for(const a of [...G.walkers,G.vet,G.ple,G.boss])if(a&&a.body&&inCab(a.body.c)){a.body.c=[0,a.body.c[1],G.S.cab.door+3.2];upd(a.body);}
+  if(isHost())for(const a of [...G.walkers,G.vet,G.ple,G.boss,G.leo])if(a&&a.body&&inCab(a.body.c)){a.body.c=[0,a.body.c[1],G.S.cab.door+3.2];upd(a.body);}
   sfx('door',0.8);hint('Двери закрываются. Лифт поедет через секунду',2.2);}
 function rideStop(g){const R=g&&g.ride;if(!R)return;if(R.mus)R.mus.stop();if(R.rum)R.rum.stop();g.ride=null;}
 function rideLocal(dt){const R=G.ride;if(!R)return;R.t+=dt;const t=R.t;G.rideDoor=clamp(t/1.3,0,1);G.inv=99;
@@ -1541,7 +1728,7 @@ function stepProxies(dt){const now=performance.now();for(const r of G.rem.values
     if(dist3(b.c,t)<3&&!r.echo){sweep(b,0,t[0]-b.c[0],'proxy',dt);sweep(b,2,t[2]-b.c[2],'proxy',dt);}
     b.c=t;upd(b);}}
 let thudT=0;
-function thud(o,s){if(thudT>0||s<4)return;thudT=0.08;hostEvent({k:'sfx',s:o.mass>15?'thud':'tick',p:o.c.map(r2)});if(G.S.listens&&s>5)G.noiseQ.push({p:o.c.slice(),l:s>9?3:2});}
+function thud(o,s){if(thudT>0||s<4)return;thudT=0.08;hostEvent({k:'sfx',s:o.mass>15?'thud':'tick',p:o.c.map(r2)});if(G.S.listens&&s>5)G.noiseQ.push({p:o.c.slice(),l:s>9?3:2});if(G.S.feels&&onGlyph5([o.c[0],o.c[1]-o.h[1]+0.5,o.c[2]]))G.glyphQ.push({p:[o.c[0],0,o.c[2]],s:s>9?2:1.2});}
 function stepDyns(dt){for(const o of G.dyns){o.hold=null;o.holdBy=null;}
   for(const p of allPlayers()){if(p.echo||p.grabId==null||p.grabId<0||!p.gt)continue;const o=G.dyns[p.grabId];if(o&&o.alive){o.hold=p.gt;o.holdBy=p.pid;}}
   for(const o of G.dyns){if(!o.alive)continue;const grabbed=!!o.hold;
@@ -1565,7 +1752,7 @@ function stepDyns(dt){for(const o of G.dyns){o.hold=null;o.holdBy=null;}
     if(o.c[1]<-30)o.alive=false;}}
 function step(dt){thudT-=dt;syncActorsOff();stepPlayer(dt);
   if(isHost()){stepProxies(dt);for(const w of G.walkers)stepActor(w,dt,'walker');if(G.boss&&G.boss.alive&&G.boss.active)stepActor(G.boss,dt,'big');
-    if(G.vet)stepActor(G.vet,dt,'big');if(G.ple)stepActor(G.ple,dt,'big');stepDyns(dt);}}
+    if(G.vet)stepActor(G.vet,dt,'big');if(G.ple)stepActor(G.ple,dt,'big');if(G.leo&&!G.leo.dead)stepActor(G.leo,dt,'big');stepDyns(dt);}}
 
 /* ================= actions ================= */
 function shooterPos(){const e=G.eye,c=G.cam;const R=rot3(c.pitch,c.yaw,0);const l=[0.21,-0.19,-0.84];return [e[0]+R[0]*l[0]+R[1]*l[1]+R[2]*l[2],e[1]+R[3]*l[0]+R[4]*l[1]+R[5]*l[2],e[2]+R[6]*l[0]+R[7]*l[1]+R[8]*l[2]];}
@@ -1582,7 +1769,7 @@ function startPrimary(){if(G.phase!=='play'||G.paused)return;if(G.echo){hint('Э
   if(m===0){if(h&&h.kind==='static'&&h.ent.anchor&&h.t<=38){G.rope.on=true;G.rope.anchor=h.p.slice();G.rope.len=Math.max(1.6,h.t*0.94);G.rope.reel=G.heldSec;fired(1);sfx('shotRope');netShot(h.p,h.n,true);}else miss(h,38);}
   else if(m===1){if(h&&h.kind==='dyn'&&h.t<=30){G.grab.obj=h.ent;G.grab.drain=0;fired(1);sfx('shotGrab');}
     else if(h&&h.kind==='core'&&G.boss&&G.boss.bound>0&&h.t<=30){G.extracting=true;fired(1);sfx('shotGrab');}else miss(h,30);}
-  else{if(h&&['walker','eye','boss','core','vet','ple'].includes(h.kind)&&h.t<=26){bindHit(h);fired(2);sfx('shotBind');G.shots.push({a:shooterPos(),b:h.p.slice(),t:0.18});}else miss(h,26);}}
+  else{if(h&&['walker','eye','boss','core','vet','ple','leo'].includes(h.kind)&&h.t<=26){bindHit(h);fired(2);sfx('shotBind');G.shots.push({a:shooterPos(),b:h.p.slice(),t:0.18});}else miss(h,26);}}
 function miss(h,r){const f=fwdVec(),e=G.eye,t=h?Math.min(h.t,r):r;const b=[e[0]+f[0]*t,e[1]+f[1]*t,e[2]+f[2]*t];G.shots.push({a:shooterPos(),b,t:0.12});fired(1);sfx('shotMiss');G.cam.recoil=0.6;
   if(h&&h.kind==='static'&&h.t<=r)netShot(h.p,h.n,true);else netShot(b,[0,1,0],false);
   if(G.mode===0)hint(h&&h.kind!=='static'?'Трос цепляется только за стены, трубы и балки':'Слишком далеко для троса',1.6);
@@ -1591,11 +1778,13 @@ function bindHit(h){let k=h.kind,i=0;if(k==='walker')i=G.walkers.indexOf(h.ent);
   applyBind(k,i);if(NET.mode==='client')netSend({t:'bind',k,i,p:h.p.map(r2)});else if(NET.mode==='host')netBroadcast({t:'ev',k:'sfx',s:'bind',p:h.p.map(r2)});netShot(h.p,[0,1,0],false);}
 function applyBind(k,i){if(k==='walker'){const w=G.walkers[i];if(w)w.bound=6;}else if(k==='eye'){const e=G.eyes[i];if(e)e.bound=11;}
   else if(k==='boss'){const B=G.boss;if(B&&B.alive&&B.bound<=0){B.bound=3.8;if(isHost())hostEvent({k:'bind1'});}}
-  else if(k==='vet'&&G.vet)G.vet.bound=4;else if(k==='ple'&&G.ple){G.ple.bound=5;if(isHost())G.ple.st=0;}}
+  else if(k==='vet'&&G.vet)G.vet.bound=4;else if(k==='ple'&&G.ple){G.ple.bound=5;if(isHost())G.ple.st=0;}else if(k==='leo'&&G.leo)G.leo.bound=4;}
 function endPrimary(){G.heldPrim=false;G.rope.on=false;G.grab.obj=null;G.extracting=false;}
 function jumpAction(){if(G.phase!=='play'||G.paused)return;if(G.rope.on){const b=G.player.body;G.rope.on=false;b.v[1]=Math.max(b.v[1],0)+5.5;sfx('jump');}else G.player.jumpBuf=0.15;}
 function secondaryDown(){if(G.phase!=='play'||G.paused||G.echo)return;G.heldSec=true;if(G.mode===0&&G.rope.on)G.rope.reel=true;
-  if(G.mode===1&&G.grab.obj){const o=G.grab.obj,f=fwdVec(),s=o.mass<=8?19:o.mass<=40?11:4;const v=[f[0]*s,f[1]*s+2,f[2]*s];
+  if(G.mode===1&&G.grab.obj){const o=G.grab.obj,f=fwdVec(),s=o.mass<=8?19:o.mass<=40?11:4;let v=[f[0]*s,f[1]*s+2,f[2]*s];
+    if(o.kind==='sun'&&G.leo&&!G.leo.dead){const ch=leoChest(G.leo),e=G.eye,de=[ch[0]-e[0],ch[1]-e[1],ch[2]-e[2]],dl=Math.hypot(...de);
+      if(dl<28&&(de[0]*f[0]+de[1]*f[1]+de[2]*f[2])/dl>0.96){const d=[ch[0]-o.c[0],ch[1]-o.c[1],ch[2]-o.c[2]],t=Math.max(0.15,Math.hypot(...d)/19);v=[d[0]/t,d[1]/t+0.5*GRAV*t,d[2]/t];}}
     if(isHost()){o.v=v;o.spin=null;o.float=false;}else netSend({t:'thr',i:o.i,v:v.map(r2)});G.grab.obj=null;sfx('throw');emitNoise(G.player.body.c.slice(),1);}}
 function secondaryUp(){G.heldSec=false;G.rope.reel=false;}
 function setMode(m){m=((m%3)+3)%3;if(m===G.mode)return;endPrimary();G.mode=m;sfx('tick',0.5);
@@ -1655,13 +1844,13 @@ function foundCount(){const s=load();return new Set(s.found||[]).size;}
 function hud(dt){const F=G.F;
   setTxt('obj',H.objT,G.ride?'Лифт едет вниз':F.lift>=0?'Лифт отправляется':G.S.objective());
   const hpS=G.hp+'';if(G.lastHud.hp!==hpS){G.lastHud.hp=hpS;[...H.hp.children].forEach((el,i)=>el.className=i<G.hp?'':'off');}
-  setTxt('arc',H.arcN,foundCount()+'/6');setTxt('sec',H.secN,'Сектор '+G.S.code);setTxt('floor',H.floorN,String(RUN.floor).padStart(2,'0'));
+  setTxt('arc',H.arcN,foundCount()+'/'+ARCH.length);setTxt('sec',H.secN,'Сектор '+G.S.code);setTxt('floor',H.floorN,String(RUN.floor).padStart(2,'0'));
   const co=NET.mode==='host'||NET.mode==='client';H.roomL.hidden=!co;if(co)setTxt('room',H.roomN,NET.code);
   if(G.lastHud.mode!==G.mode){G.lastHud.mode=G.mode;H.modes.forEach((el,i)=>el.classList.toggle('on',i===G.mode));fireB.textContent=['Трос','Захват','Путы'][G.mode];altB.textContent=['Вверх','Бросить','—'][G.mode];altB.classList.toggle('dim',G.mode===2);}
   const am=G.charges+'';if(G.lastHud.am!==am){G.lastHud.am=am;H.ammo.innerHTML=am+'<small>/20</small>';H.ammo.style.color=G.charges<=4?'var(--alarm)':'';}
   H.rbar.style.width=(G.reload>0?(1-G.reload/1.3)*100:0)+'%';
   const arena=G.S===S1&&F.arena&&!F.defeated;H.boss.hidden=!arena;if(arena){setTxt('eyes',H.eyesN,G.eyes.filter(e=>e.sees).length+'');setTxt('core',H.coreN,(G.boss?G.boss.core:0)+'/3');}
-  const h=G.aim,m=G.mode;let ok=false;if(h){if(m===0)ok=h.kind==='static'&&h.ent.anchor&&h.t<=38;else if(m===1)ok=(h.kind==='dyn'&&h.t<=30)||(h.kind==='core'&&G.boss&&G.boss.bound>0);else ok=['walker','eye','boss','core','vet','ple'].includes(h.kind)&&h.t<=26;}
+  const h=G.aim,m=G.mode;let ok=false;if(h){if(m===0)ok=h.kind==='static'&&h.ent.anchor&&h.t<=38;else if(m===1)ok=(h.kind==='dyn'&&h.t<=30)||(h.kind==='core'&&G.boss&&G.boss.bound>0);else ok=['walker','eye','boss','core','vet','ple','leo'].includes(h.kind)&&h.t<=26;}
   H.cross.className=ok?'ok':'';H.cross.hidden=G.echo;
   G.hintT-=dt;H.hint.style.opacity=G.hintT>0?Math.min(1,G.hintT*2):0;
   G.cardT-=dt;H.card.hidden=!(G.cardT>0);H.flash.style.opacity=Math.max(0,G.flash)*0.45;
@@ -1678,7 +1867,8 @@ function hud(dt){const F=G.F;
   else if(G.echo)ctr='<b>Эхо</b>Возвращение через '+Math.max(1,Math.ceil(G.echoT))+' с';
   else if(G.phase==='play'&&!G.paused&&!document.pointerLockElement&&!G.noLock&&!T.on&&!PAD.on)ctr='Кликни по экрану, чтобы управлять мышью';
   H.center.hidden=!ctr;setHTML('ctr',H.center,ctr);
-  H.noise.hidden=!G.S.listens;if(G.S.listens){const nl=G.noiseShow;H.nb.forEach((el,i)=>{el.className=nl>i+0.01?(nl>=2?'hot':'on'):'';});}
+  const nsOn=!!(G.S.listens||G.S.feels);H.noise.hidden=!nsOn;if(nsOn){if(G.lastHud.nsl!==G.sec){G.lastHud.nsl=G.sec;const sp=H.noise.querySelector('span');if(sp)sp.textContent=G.S.feels?'Страж':'Шум';}
+    const nl=G.S.feels?(G.F.aw||0):G.noiseShow;H.nb.forEach((el,i)=>{el.className=nl>i+0.01?(nl>=2?'hot':'on'):'';});}
   // team
   H.team.hidden=!co;if(co){let s='';for(const p of [G.me,...[...G.rem.values()].sort((a,b)=>a.pid-b.pid)]){const ro=NET.roster.find(r=>r.pid===p.pid);if(!ro)continue;
       const hp=p===G.me?G.hp:p.hp,ec=p===G.me?G.echo:p.echo;s+='<div><span class="dot" style="background:'+PCSS[ro.color%4]+'"></span>'+esc(ro.name)+(p===G.me?' (ты)':'')+(ec?' <span class="ec">эхо</span>':'<span class="hpm">'+[0,1,2].map(i=>'<i class="'+(i<hp?'':'off')+'"></i>').join('')+'</span>')+'</div>';}
@@ -1740,6 +1930,15 @@ function applyEvent(m,local){switch(m.k){
   case 'sector':RUN.floor=m.f||RUN.floor+1;enterSector(m.n);break;
   case 'ride':G.F.rideF=m.f;startRide(0);break;
   case 'shove':getShoved(m.v,m.by);break;
+  case 'leo':{const p=m.p||(G.leo?leoHead(G.leo):[0,0,0]),d=dist3(p,G.player.body.c);
+    if(m.e==='stir')sfxAt('grind',p,1,40);
+    else if(m.e==='wake'){sfxAt('leoRoar',p,1.2,60);if(!G.said.has('woke'))say('woke','Он проснулся! Уходи с пола: на камни, на колонну или на трос.');}
+    else if(m.e==='wind')sfxAt('grind',p,0.8,30);
+    else if(m.e==='stomp'){sfxAt('stomp',p,1.3,60);G.shake=Math.max(G.shake,clamp(1.2-d/18,0.15,1));G.waves.push({p,t:G.time});}
+    else if(m.e==='sealed'){sfxAt('clang',p,1,20);if(d<25)hint('Грудь стража закрыта, пока он спит. Камень его разбудил',2.4);}
+    else if(m.e==='sun'){sfxAt('sunHit',p,1.2,60);G.shake=Math.max(G.shake,0.5);}
+    else if(m.e==='down'){if(!local)s5Debris(m.c,m.yaw,false);sfxAt('crumble',m.c,1.3,60);G.shake=1.2;}
+    break;}
   case 'bo':if(m.ph===1)sfx('buzz');else if(m.ph===2){sfx('pdown');if(G.darkSnd)G.darkSnd.stop();G.darkSnd=darkLoop();}else{if(G.darkSnd){G.darkSnd.stop();G.darkSnd=null;sfx('pup');}}break;
   case 'win':winRun();break;}}
 function stepKey(wet){return wet?'stepW':G.S===S2?'stepL':G.S===S3?'stepE':'stepC';}
@@ -1751,10 +1950,13 @@ function noticeCheck(dt){G.ntc=(G.ntc||0)-dt;const me=G.player.body.c;const ok=!
   const nearest=p=>{let b=null,bd=1e9;for(const q of livePlayers()){const d=dist3(q.body.c,p);if(d<bd){bd=d;b=q;}}return b;};
   const V=G.vet;if(V){if(ok&&V.st===3&&G.vPrev!==3&&V.bound<=0&&dist3(V.body.c,me)<18&&nearest(V.body.c)===G.me)sting('notice');G.vPrev=V.st;}
   const P=G.ple;if(P){if(ok&&P.st===3&&G.pPrev!==3&&dist3(P.body.c,me)<22)sting('notice');else if(ok&&P.st===1&&G.pPrev===0&&dist3(P.body.c,me)<16)sting('alert');G.pPrev=P.st;}
+  const Lo=G.leo;if(Lo){if(ok&&Lo.st===2&&G.lPrev!==2&&G.lPrev!==4&&G.lPrev!==6&&!Lo.dead)sting('notice');G.lPrev=Lo.st;}
   if(G.eyes.length){const n=G.eyes.filter(e=>e.sees).length;if(ok&&n>0&&!(G.eyN>0)&&G.F.arena&&!G.F.defeated)sting('notice');G.eyN=n;}
   for(const w of G.walkers){const d=dist3(w.body.c,me),pd=w.dPrev==null?d:w.dPrev;w.dPrev=d;if(ok&&d<6.5&&pd>=6.5&&w.an&&w.an.spd>0.3)sting('creep');}}
 function sting(k){if(G.ntc>0)return;G.ntc=k==='notice'?4:3;sfx(k);if(k==='notice')G.shake=Math.max(G.shake,0.25);}
 function monsterAudio(dt){
+  const Lo=G.leo;if(Lo&&!Lo.dead){const c=Lo.body.c,pv=Lo.pa||(Lo.pa=[c[0],c[2]]);const mv=Math.hypot(c[0]-pv[0],c[2]-pv[1]);Lo.pa=[c[0],c[2]];Lo.sd=(Lo.sd||0)+(mv<2?mv:0);
+    if(Lo.sd>1.55){Lo.sd=0;sfxAt('leoStep',[c[0],0.2,c[2]],1.1,45);G.shake=Math.max(G.shake,clamp(0.35-dist3(c,G.player.body.c)/60,0,0.3));}}
   for(const w of G.walkers){const c=w.body.c,pv=w.pa||(w.pa=[c[0],c[2]]);const mv=Math.hypot(c[0]-pv[0],c[2]-pv[1]);w.pa=[c[0],c[2]];if(mv>0.008){w.clackT=(w.clackT||0)-dt;if(w.clackT<=0){w.clackT=rand(0.28,0.45);sfxAt('clack',c,0.9,4);}}}
   const B=G.boss;if(B&&B.alive&&B.active){const c=B.body.c,pv=B.pa||(B.pa=[c[0],c[2]]);const mv=Math.hypot(c[0]-pv[0],c[2]-pv[1]);B.pa=[c[0],c[2]];if(mv>0.01){B.stepT=(B.stepT||0)-dt;if(B.stepT<=0){B.stepT=0.55;sfxAt('thud',c,1,6);}}}
   const V=G.vet;if(V){const c=V.body.c,pv=V.pa||(V.pa=[c[0],c[2]]);const mv=Math.hypot(c[0]-pv[0],c[2]-pv[1])/Math.max(dt,1e-3);V.pa=[c[0],c[2]];
@@ -1765,7 +1967,7 @@ function monsterAudio(dt){
     if(st!==G.plePrev){if(st===1)sfxAt('click',head,1,6);G.plePrev=st;}}}
 function smoothNet(dt){const k=1-Math.exp(-14*dt),now=performance.now();
   const sm=(b,t)=>{if(!t)return;if(dist3(b.c,t)>4)b.c=t.slice();else for(let i=0;i<3;i++)b.c[i]=lerp(b.c[i],t[i],k);upd(b);};
-  for(const w of G.walkers)sm(w.body,w.tgt);for(const a of [G.boss,G.vet,G.ple])if(a)sm(a.body,a.tgt);
+  for(const w of G.walkers)sm(w.body,w.tgt);for(const a of [G.boss,G.vet,G.ple,G.leo])if(a)sm(a.body,a.tgt);
   for(const o of G.dyns)if(o.tgt&&o.alive)sm(o,o.tgt);
   for(const r of G.rem.values())if(r.tgt){const age=Math.min(0.25,(now-r.rt)/1000);sm(r.body,[r.tgt[0]+r.vel[0]*age,r.tgt[1]+clamp(r.vel[1]*age,-1,1),r.tgt[2]+r.vel[2]*age]);}}
 function localUpdate(dt){const b=G.player.body,F=G.F;G.zone=G.S.zone(b.c);G.lightOn=F.lf>0.5;
@@ -1826,7 +2028,7 @@ function render(dt){resize();gl.viewport(0,0,canvas.width,canvas.height);
   const lf=F.lf,rl=G.ride?G.ride.light:1;
   G.lights.forEach((L,i)=>{let k=L.i;if(L.grp==='main'){k*=lf;if(L.fl&&Math.random()<0.04)k*=0.3;}else if(L.grp==='steady'){if(L.fl&&Math.random()<0.04)k*=0.3;}
     else if(L.grp==='core'){if(G.boss&&G.boss.alive){L.p=corePos();k=1.4+Math.sin(tnow*5.5)*0.3;}else if(G.coreObj&&G.coreObj.alive){L.p=G.coreObj.c;k=0.4+G.coreLightK*1.2;}else k=0;}
-    else if(L.grp==='exit')k=S.exitLit()?L.i:0;else if(L.grp==='reader')k=F.played?L.i*(0.8+0.3*Math.sin(tnow*6)):F.reels>0?0.35:0.12;
+    else if(L.grp==='exit')k=S.exitLit()?L.i:0;else if(L.grp==='sector')k=S.light?S.light(L,tnow):L.i;else if(L.grp==='reader')k=F.played?L.i*(0.8+0.3*Math.sin(tnow*6)):F.reels>0?0.35:0.12;
     k*=rl;LP[i*4]=L.p[0];LP[i*4+1]=L.p[1];LP[i*4+2]=L.p[2];LP[i*4+3]=k>0.001?L.r:0;LC[i*3]=L.c[0]*k;LC[i*3+1]=L.c[1]*k;LC[i*3+2]=L.c[2]*k;});
   for(let i=G.lights.length;i<14;i++)LP[i*4+3]=0;
   gl.uniform4fv(u.uLP,LP);gl.uniform3fv(u.uLC,LC);gl.uniform1f(u.uAmbF,Math.max(0.12,lf*rl));gl.uniform1f(u.uFix,lf);gl.uniform3fv(u.uSky,S.sky);gl.uniform3fv(u.uGnd,S.gnd);
@@ -1849,6 +2051,9 @@ function render(dt){resize();gl.viewport(0,0,canvas.width,canvas.height);
   const B=G.boss;if(B&&B.alive){const c=B.body.c,bp=poseBoss(B,dt,tnow);compose(RBM,c[0],c[1]-1.6+bp.bob,c[2],B.yaw,0,0);drawRig(RIG.boss,RBM,bp,1);if(B.bound>0)drawMesh(M.webBig,RBM);
     const cp=corePos(),tt=tnow/0.6;compose(MODEL,cp[0],cp[1],cp[2],tt,tt*0.7,0);drawMesh(M.core,MODEL,1+Math.sin(tt*3)*0.3);}
   const V=G.vet;if(V){const c=V.body.c;compose(RBM,c[0],c[1]-0.95,c[2],V.yaw,0,Math.sin(tnow*9)*0.006*(V.st===3?2:1));drawRig(RIG.vet,RBM,poseVet(V,dt,tnow),V.st===3?1.6:1);if(V.bound>0){compose(MODEL,c[0],c[1]-0.95,c[2],V.yaw,0,0);drawMesh(M.webVet,MODEL);}}
+  const Lo=G.leo;if(Lo&&!Lo.dead){const c=Lo.body.c,lp=poseLeo(Lo,dt,tnow);compose(RBM,c[0],c[1]-2.5+lp.bob,c[2],Lo.yaw,lp.lean,0);
+    const em=Lo.st===0?0.08:Lo.st===1?0.6:1.3;drawRig(RIG.leo,RBM,lp,em);if(Lo.bound>0){compose(TMP2,0,2.6,0,0,0,0);mul4(MODEL,RBM,TMP2);drawMesh(M.webBig,MODEL);}
+    for(let i=0;i<Math.min(3,F.suns||0);i++){compose(TMP2,0,3.95-i*0.4,0.7,0,0,0);mul4(MODEL,RBM,TMP2);drawMesh(M.sunS,MODEL,1);}}
   const Pl=G.ple;if(Pl){const c=Pl.body.c;compose(RBM,c[0],c[1]-1.2,c[2],Pl.yaw,0,Math.sin(tnow*1.7)*0.02);drawRig(RIG.ple,RBM,posePle(Pl,dt,tnow));if(Pl.bound>0)drawMesh(M.webPle,RBM);}
   for(const r of G.rem.values()){if(!r.inGame)continue;const c=r.rc||r.body.c,ro=NET.roster.find(x=>x.pid===r.pid),col=ro?ro.color%4:r.color%4;
     if(r.echo)gl.uniform4fv(u.uTint,[0.45,0.8,0.9,0.62]);compose(RBM,c[0],c[1]-0.9,c[2],(r.yaw||0)+Math.PI,0,0);drawRig(RIG.pl[col],RBM,posePlayer(r,c,dt,r.pitch));if(r.echo)gl.uniform4fv(u.uTint,NOTINT);}
@@ -1858,7 +2063,7 @@ function render(dt){resize();gl.viewport(0,0,canvas.width,canvas.height);
   const sh=[];const blob=(c,rr,a)=>{const hit=raycast([c[0],c[1],c[2]],[0,-1,0],10,RS|RD,null);if(!hit)return;const hg=c[1]-hit.p[1];if(hg>6)return;quad(sh,[c[0],hit.p[1]+0.02,c[2]],[rr,0,0],[0,0,rr],a*(1-hg/6));};
   for(const w of G.walkers)blob([w.body.c[0],w.body.c[1]-0.9,w.body.c[2]],0.55,0.55);
   if(B&&B.alive)blob([B.body.c[0],B.body.c[1]-1.5,B.body.c[2]],0.95,0.6);
-  if(V)blob([V.body.c[0],V.body.c[1]-0.9,V.body.c[2]],0.8,0.6);if(Pl)blob([Pl.body.c[0],Pl.body.c[1]-1.15,Pl.body.c[2]],0.6,0.55);
+  if(V)blob([V.body.c[0],V.body.c[1]-0.9,V.body.c[2]],0.8,0.6);if(G.leo&&!G.leo.dead)blob([G.leo.body.c[0],0.02,G.leo.body.c[2]],1.6,0.6);if(Pl)blob([Pl.body.c[0],Pl.body.c[1]-1.15,Pl.body.c[2]],0.6,0.55);
   for(const r of G.rem.values())if(r.inGame&&!r.echo){const c=r.rc||r.body.c;blob([c[0],c[1]-0.85,c[2]],0.5,0.5);}
   for(const o of G.dyns){if(!o.alive||o.pick)continue;blob([o.c[0],o.c[1]-o.h[1]+0.01,o.c[2]],Math.max(o.h[0],o.h[2])*1.6,0.45);}
   for(const e of G.eyes)blob([e.p[0],e.p[1]+0.05,e.p[2]],0.5,0.4);
@@ -1896,12 +2101,12 @@ function render(dt){resize();gl.viewport(0,0,canvas.width,canvas.height);
 
 /* ================= flow & menus ================= */
 function hideOverlays(){for(const id of ['menu','coopO','lobbyO','pauseO','deadO','winO','msgO','transO'])$('#'+id).hidden=true;}
-const SMON=['Манекены','Ветошь','Плёнка'];
+const SMON=['Манекены','Ветошь','Плёнка','Эль Гранд Leo'];
 function renderSecs(el,sel,pick){const un=load().unlocked||0;el.innerHTML='';SECT.forEach((S,i)=>{const b=document.createElement('button');b.type='button';b.className='sec';b.disabled=i>un;
   b.setAttribute('aria-pressed',i===sel?'true':'false');b.innerHTML='<img src="'+(SIMG[i]||'')+'" alt=""><b>'+S.code+'</b>'+S.name+'<small>'+SMON[i]+'</small>';if(i>un)b.title='Откроется, когда лифт привезёт сюда';b.addEventListener('click',()=>pick(i));el.appendChild(b);});}
 function renderMenu(){const s=load();MENUSEL=Math.min(MENUSEL,s.unlocked||0);renderSecs($('#menuSecs'),MENUSEL,i=>{MENUSEL=i;newSector(i);G.phase='menu';renderMenu();});
   $('#deepN').textContent=String(s.deep||0).padStart(2,'0');
-  const bits=[];bits.push('архивов '+new Set(s.found||[]).size+'/6');if(s.wins)bits.push('спусков '+s.wins);$('#bestNote').textContent=bits.join(' · ');
+  const bits=[];bits.push('архивов '+new Set(s.found||[]).size+'/'+ARCH.length);if(s.wins)bits.push('спусков '+s.wins);$('#bestNote').textContent=bits.join(' · ');
   $('#menuCycle').textContent='Цикл '+((s.wins||0)+1)+' · 1987/2026';}
 function toMenu(){hideOverlays();exitLock();$('#hud').hidden=true;if(G.sec!==MENUSEL)newSector(MENUSEL);else{newSector(MENUSEL);}G.phase='menu';renderMenu();$('#menu').hidden=false;}
 function startSolo(fromPad){initAudio();RUN=newRun(MENUSEL);hideOverlays();enterSector(MENUSEL);if(!fromPad)lock();}
@@ -2022,7 +2227,7 @@ if(/^#[A-Za-z0-9]{4}$/.test(location.hash))openCoop();
 window.__sectors={HOOK,shot(){render(1/60);},sim(sec){const n=Math.round(sec*60);for(let i=0;i<n;i++){step(FIX);update(FIX);}},get G(){return G;},get RUN(){return RUN;},NET,K,T,
   tp(x,y,z,yaw,pitch){const b=G.player.body;b.c=[x,y+0.9,z];b.v=[0,0,0];upd(b);G.cam.yaw=yaw||0;G.cam.pitch=pitch||0;},
   skipTrans(){if(G.phase==='trans'){G.transT=0;$('#transO').hidden=true;$('#hud').hidden=false;G.phase='play';G.t0=G.time;}},
-  shove,startRide,nextSec,step,update,startPrimary,endPrimary,setMode,secondaryDown,secondaryUp,enterSector,startSolo,netHost,netJoin,startCoopRun,netLeave,emitNoise,hostEvent};
+  shove,startRide,nextSec,nav5:()=>NAV5,dbg:{wideLos,losStatic,raycast},step,update,startPrimary,endPrimary,setMode,secondaryDown,secondaryUp,enterSector,startSolo,netHost,netJoin,startCoopRun,netLeave,emitNoise,hostEvent};
 requestAnimationFrame(frame);
 
 })();
