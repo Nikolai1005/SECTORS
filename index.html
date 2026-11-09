@@ -1337,7 +1337,7 @@ async function netJoin(code){if(NET.mode!=='solo')return;code=(code||'').toUpper
   if(code.length!==4){coopStatus('Код комнаты состоит из 4 символов.','err');return;}
   coopStatus('Ищу комнату '+code+'…');let PeerCls;try{PeerCls=await loadPeer();}catch(e){coopStatus(NOSERVER,'err');return;}
   let p;try{p=new PeerCls(undefined,{debug:0});}catch(e){coopStatus(NOSERVER,'err');return;}
-  let welcomed=false;clearTimeout(NET.timer);NET.timer=setTimeout(()=>{if(!welcomed){try{p.destroy();}catch(e){}NET.mode='solo';coopStatus('Комната '+code+' не отвечает. Проверь код или попроси хоста создать новую.','err');}},15000);
+  let welcomed=false;clearTimeout(NET.timer);NET.timer=setTimeout(()=>{if(!welcomed){try{p.destroy();}catch(e){}NET.mode='solo';coopStatus('Комната '+code+' не отвечает. Скорее всего, сеть не пускает прямое соединение. Попробуйте другую сеть, например мобильный интернет.','err');}},15000);
   NET.peer=p;NET.mode='joining';NET.code=code;
   p.on('open',()=>{const c=p.connect(ROOM_PREFIX+code,{reliable:true});NET.host=c;
     c.on('open',()=>c.send({t:'hello',v:VER,name:NET.name}));
@@ -1345,7 +1345,7 @@ async function netJoin(code){if(NET.mode!=='solo')return;code=(code||'').toUpper
     c.on('close',()=>{if(NET.mode==='client'||NET.mode==='joining')hostLost('Хост закрыл комнату или пропала связь.');});
     c.on('error',()=>{});});
   p.on('error',err=>{const t=err&&err.type;if(welcomed)return;clearTimeout(NET.timer);NET.mode='solo';try{p.destroy();}catch(e){}
-    coopStatus(t==='peer-unavailable'?'Комната '+code+' не найдена. Проверь код.':NOSERVER,'err');});}
+    coopStatus(t==='peer-unavailable'?'Комната '+code+' не найдена. Проверь код и что у хоста открыта вкладка с игрой.':NOSERVER,'err');});}
 
 function hostAccept(conn){conn.on('data',m=>{if(!m||typeof m!=='object')return;
     if(m.t==='hello'){if(m.v!==VER){conn.send({t:'bye',r:'ver'});setTimeout(()=>conn.close(),400);return;}
@@ -1936,9 +1936,12 @@ $('#startB').addEventListener('click',()=>startSolo());
 $('#coopB').addEventListener('click',openCoop);
 $('#coopBackB').addEventListener('click',()=>{if(NET.mode==='joining')netLeave(true);toMenu();});
 $('#hostB').addEventListener('click',()=>{initAudio();takeName();netHost();});
-$('#joinB').addEventListener('click',()=>{initAudio();takeName();netJoin(codeI.value);});
-codeI.addEventListener('keydown',e=>{if(e.key==='Enter'){initAudio();takeName();netJoin(codeI.value);}});
-codeI.addEventListener('input',()=>{codeI.value=codeI.value.toUpperCase().replace(/[^A-Z0-9]/g,'');});
+$('#joinB').addEventListener('click',()=>{initAudio();takeName();netJoin(normCode(codeI.value).code);});
+codeI.addEventListener('keydown',e=>{if(e.key==='Enter'){initAudio();takeName();netJoin(normCode(codeI.value).code);}});
+// friends often type the code on a Russian keyboard: map Cyrillic look-alikes to Latin, and say so if other letters were typed
+const LOOK={'А':'A','В':'B','Е':'E','Ё':'E','К':'K','М':'M','Н':'H','Р':'P','С':'C','Т':'T','Х':'X','У':'Y'};
+function normCode(v){const up=String(v||'').toUpperCase().replace(/[АВЕЁКМНРСТХУ]/g,ch=>LOOK[ch]);return {code:up.replace(/[^A-Z0-9]/g,'').slice(0,4),cyr:/[А-ЯЁ]/.test(up)};}
+codeI.addEventListener('input',()=>{const n=normCode(codeI.value);codeI.value=n.code;if(n.cyr)coopStatus('В коде только латинские буквы и цифры. Переключи клавиатуру на английскую.','err');});
 $('#lobbyStartB').addEventListener('click',()=>startCoopRun(LOBBYSEL));
 $('#leaveB').addEventListener('click',()=>netLeave());
 $('#pLeaveB').addEventListener('click',()=>netLeave());
