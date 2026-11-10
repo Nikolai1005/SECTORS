@@ -1,0 +1,151 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "v1": {
+      "s01": {
+        ".read": true,
+        ".indexOn": [
+          "t"
+        ],
+        "$id": {
+          ".write": "!data.exists()",
+          ".validate": "newData.hasChildren(['n', 't', 'p', 'd'])",
+          "n": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 60"
+          },
+          "t": {
+            ".validate": "newData.isNumber() && newData.val() >= 10 && newData.val() <= 36000"
+          },
+          "p": {
+            ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 4"
+          },
+          "d": {
+            ".validate": "newData.isNumber() && newData.val() <= now + 600000"
+          },
+          "v": {
+            ".validate": "newData.isNumber()"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      },
+      "s02": {
+        ".read": true,
+        ".indexOn": [
+          "t"
+        ],
+        "$id": {
+          ".write": "!data.exists()",
+          ".validate": "newData.hasChildren(['n', 't', 'p', 'd'])",
+          "n": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 60"
+          },
+          "t": {
+            ".validate": "newData.isNumber() && newData.val() >= 10 && newData.val() <= 36000"
+          },
+          "p": {
+            ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 4"
+          },
+          "d": {
+            ".validate": "newData.isNumber() && newData.val() <= now + 600000"
+          },
+          "v": {
+            ".validate": "newData.isNumber()"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      },
+      "s03": {
+        ".read": true,
+        ".indexOn": [
+          "t"
+        ],
+        "$id": {
+          ".write": "!data.exists()",
+          ".validate": "newData.hasChildren(['n', 't', 'p', 'd'])",
+          "n": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 60"
+          },
+          "t": {
+            ".validate": "newData.isNumber() && newData.val() >= 10 && newData.val() <= 36000"
+          },
+          "p": {
+            ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 4"
+          },
+          "d": {
+            ".validate": "newData.isNumber() && newData.val() <= now + 600000"
+          },
+          "v": {
+            ".validate": "newData.isNumber()"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      },
+      "s05": {
+        ".read": true,
+        ".indexOn": [
+          "t"
+        ],
+        "$id": {
+          ".write": "!data.exists()",
+          ".validate": "newData.hasChildren(['n', 't', 'p', 'd'])",
+          "n": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 60"
+          },
+          "t": {
+            ".validate": "newData.isNumber() && newData.val() >= 10 && newData.val() <= 36000"
+          },
+          "p": {
+            ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 4"
+          },
+          "d": {
+            ".validate": "newData.isNumber() && newData.val() <= now + 600000"
+          },
+          "v": {
+            ".validate": "newData.isNumber()"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      },
+      "run": {
+        ".read": true,
+        ".indexOn": [
+          "f"
+        ],
+        "$id": {
+          ".write": "!data.exists()",
+          ".validate": "newData.hasChildren(['n', 't', 'p', 'd', 'f'])",
+          "n": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 60"
+          },
+          "t": {
+            ".validate": "newData.isNumber() && newData.val() >= 10 && newData.val() <= 36000"
+          },
+          "p": {
+            ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 4"
+          },
+          "d": {
+            ".validate": "newData.isNumber() && newData.val() <= now + 600000"
+          },
+          "v": {
+            ".validate": "newData.isNumber()"
+          },
+          "f": {
+            ".validate": "newData.isNumber() && newData.val() >= 2 && newData.val() <= 999"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    }
+  }
+}
